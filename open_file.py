@@ -228,13 +228,13 @@ class OpenWriteCommand(sublime_plugin.WindowCommand):
             self.saved_layout = copy.deepcopy(layout)
 
             # Re arrange things so that this appears on the bottom
-            numRows = len(layout["rows"])
-            layout["rows"] = [0.0, 0.75, 1.0]
-            layout["cells"].append([0, numRows-1, len(layout["cols"])-1, len(layout["rows"])-1])
+            layout["rows"] = [val*0.75 for val in layout["rows"]]
+            layout["rows"].append(1.0)
+            layout["cells"].append([0, len(layout["rows"])-2, len(layout["cols"])-1, len(layout["rows"])-1])
             self.window.set_layout(layout)
 
-            # create scratch file list if it doesn't already exist
-            self.window.focus_group(1)
+            # create scratch file list since it doesn't already exist
+            self.window.focus_group(len(layout["cells"])-1)
             self.scratch_file_list = self.window.new_file()
             self.scratch_file_list.set_scratch(True)
             self.window.focus_view(self._ip)
