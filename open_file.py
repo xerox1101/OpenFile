@@ -175,17 +175,6 @@ class OpenWriteCommand(sublime_plugin.WindowCommand):
         self.close_scratch_file_list_if_exists()
         self.restore_layout()
 
-    def get_view_content(self):
-        view = self.window.active_view()
-
-        # Get the default encoding from the settings
-        encoding = view.encoding() if view.encoding() != 'Undefined' else 'UTF-8'
-
-        # Get the correctly encoded contents of the view
-        file_contents = view.substr(sublime.Region(0, view.size())).encode(encoding)
-        return file_contents
-
-
     def set_scratch_file_list(self, dir, files):
         if not self.scratch_file_list:
             layout = self.window.get_layout()
@@ -257,7 +246,7 @@ class OpenWriteCommand(sublime_plugin.WindowCommand):
             self.saved_layout = None
 
 
-class PromptOpenFilePath(OpenWriteCommand):
+class TextOpenFile(OpenWriteCommand):
 
     def run(self, use_scratch_buffer=True):
         self.handle_open_write(use_scratch_buffer=use_scratch_buffer)
