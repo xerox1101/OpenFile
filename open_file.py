@@ -89,7 +89,8 @@ class OpenWriteCommand(sublime_plugin.WindowCommand):
         # Handle deletes specially so that we can delete whole directories if needed
         if len(prevText) > len(text):
             (head, tail) = os.path.split(prevText)
-            if tail == '':
+            # Allow editing in the middle of a line
+            if tail == '' and prevText[-1] != text[-1]:
                 newPath = os.path.split(head)[0]
                 if not newPath.endswith(os.path.sep):
                     newPath += os.path.sep
@@ -254,7 +255,7 @@ class OpenWriteCommand(sublime_plugin.WindowCommand):
         longest_file_name = 0
         if len(files) > 0:
           longest_file_name = max([len(fileName) for fileName in files])
-        num_cols = view_width_chars/(longest_file_name + SCRATCH_DEFAULT_SPACING)
+        num_cols = int(view_width_chars/(longest_file_name + SCRATCH_DEFAULT_SPACING))
 
         if num_files > 0:
             # create string to display in buffer (multiple columns of text)
