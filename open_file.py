@@ -36,17 +36,17 @@ def commonprefix_nocase(args):
 
     return prefix
 
-class ReplaceAllTextCommand(sublime_plugin.TextCommand):
-    def run(self, edit, newText=""):
+class OpenFileReplaceTextCommand(sublime_plugin.TextCommand):
+    def run(self, edit, text=""):
         self.view.erase(edit, sublime.Region(0, self.view.size()))
-        self.view.insert(edit, 0, newText)
+        self.view.insert(edit, 0, text)
 
     def is_visible(self):
         return False
 
 class OpenWriteCommand(sublime_plugin.WindowCommand):
 
-    def handle_open_write(self, write_file, use_scratch_buffer):
+    def handle_open_write(self, use_scratch_buffer):
         self.scratch_file_list = None
         self.use_scratch_buffer = use_scratch_buffer    
 
@@ -57,12 +57,8 @@ class OpenWriteCommand(sublime_plugin.WindowCommand):
             if currentFilePath:                
                 (currentDir, filename) = split(currentFilePath)
                 currentDir += sep                
-        if write_file:
-            promptText = "Write file:"
-            doneCallback = self.on_done_write
-        else:
-            promptText = "Open file:"
-            doneCallback = self.on_done_open
+        promptText = "Open file:"
+        doneCallback = self.on_done_open
         self.prevText = currentDir
         self._ip = self.window.show_input_panel(
             promptText,
@@ -126,7 +122,7 @@ class OpenWriteCommand(sublime_plugin.WindowCommand):
                     self.set_scratch_file_list(".", [])
 
         if newPath is not None:
-            self._ip.run_command("replace_all_text", {"newText": newPath})
+            self._ip.run_command("open_file_replace_text", {"text": newPath})
             # Move to the end of the line since we may have added text off the end
             self._ip.run_command("move_to", {"to": "eol"})
             self.prevText = newPath
@@ -175,42 +171,9 @@ class OpenWriteCommand(sublime_plugin.WindowCommand):
         except:
             sublime.status_message('Unable to open "%s"' % text)
 
-    def on_done_write(self, text):
-        self.panel_was_closed()
-
-        self.save_file_to_disk(text)
-
     def panel_was_closed(self):
         self.close_scratch_file_list_if_exists()
         self.restore_layout()
-
-    def save_file_to_disk(self, file_name):
-        window = self.window
-        view = window.active_view()
-
-        if view.is_dirty():
-            view.set_scratch(True)
-
-        file_contents = self.get_view_content()
-
-        try:
-            f = open(file_name, "w")
-            try:
-                f.write(file_contents)
-            finally:
-                f.close()
-        except IOError:
-            self.message('Unable to write file "[%s]"' % file_name)
-
-        (group, index) = window.get_view_index(view)
-
-        window.focus_view(view)
-        window.run_command('close')
-        try:
-            new_view = window.open_file(file_name)
-            window.set_view_index(new_view, group, index)
-        except:
-            sublime.status_message('Unable to open written file "%s"' % file_name)
 
     def get_view_content(self):
         view = self.window.active_view()
@@ -242,13 +205,12 @@ class OpenWriteCommand(sublime_plugin.WindowCommand):
         else:
             # clear contents of existing scratch list
             self.scratch_file_list.set_read_only(False)
-            self.scratch_file_list.run_command("replace_all_text", {"newText": ""})
+            self.scratch_file_list.run_command("open_file_replace_text", {"text": ""})
 
         num_files = len(files)
 
         # Compute the dimensions of the window we're using to show the scratch data
         vp_extent = self.scratch_file_list.viewport_extent()
-        #view_height_chars = int(floor(vp_extent[1] / self.scratch_file_list.line_height()))
         view_width_chars = int(vp_extent[0] / self.scratch_file_list.em_width())
 
         # Figure out how many columns we can support
@@ -275,7 +237,7 @@ class OpenWriteCommand(sublime_plugin.WindowCommand):
             buffer_text = u"No files found in current directory"
 
         # Update the contents of the scratch file list buffer and mark it as read only
-        self.scratch_file_list.run_command("replace_all_text", {"newText": buffer_text})
+        self.scratch_file_list.run_command("open_file_replace_text", {"text": buffer_text})
         self.scratch_file_list.set_read_only(True)
 
     def close_scratch_file_list_if_exists(self):
@@ -298,13 +260,4 @@ class OpenWriteCommand(sublime_plugin.WindowCommand):
 class PromptOpenFilePath(OpenWriteCommand):
 
     def run(self, use_scratch_buffer=True):
-        self.handle_open_write(write_file=False, use_scratch_buffer=use_scratch_buffer)
-
-
-class PromptWriteFilePath(OpenWriteCommand):
-
-    def run(self, use_scratch_buffer=True):
-        self.handle_open_write(write_file=True, use_scratch_buffer=use_scratch_buffer)
-
-    
-
+        self.handle_open_write(use_scratch_buffer=use_scratch_buffer)
