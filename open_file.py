@@ -2,6 +2,7 @@ import sublime
 import sublime_plugin
 import sys
 import os
+import copy
 from os import listdir
 from os import sep
 from os.path import commonprefix
@@ -22,7 +23,7 @@ def commonprefix_nocase(args):
     shortest_arg = min([len(arg) for arg in args])
     prefix = ""
 
-    for i in xrange(shortest_arg):
+    for i in range(shortest_arg):
         fail = False
         char = args[0][i]
         for arg in args[1:]:
@@ -34,6 +35,14 @@ def commonprefix_nocase(args):
         prefix += char
 
     return prefix
+
+class ReplaceAllTextCommand(sublime_plugin.TextCommand):
+    def run(self, edit, newText=""):
+        self.view.erase(edit, sublime.Region(0, self.view.size()))
+        self.view.insert(edit, 0, newText)
+
+    def is_visible(self):
+        return False
 
 class OpenWriteCommand(sublime_plugin.WindowCommand):
 
@@ -106,24 +115,17 @@ class OpenWriteCommand(sublime_plugin.WindowCommand):
                         sublime.status_message(statusText)
                 else:
                     newPath = os.path.join(currentDir, filesInDir[0])
+                    if isdir(newPath) and not newPath.endswith(sep):
+                        newPath += sep
             else:
                 newPath = text[:-1]
                 sublime.status_message(
                     'No files match "%s"' % currentFile)
                 if self.scratch_file_list:
                     self.set_scratch_file_list(".", [])
-            if isdir(newPath) and not newPath.endswith(sep):
-                newPath += sep
 
         if newPath is not None:
-            theEdit = self._ip.begin_edit()
-            allTextRegion = self._ip.full_line(0)
-            self._ip.replace(
-                theEdit,
-                allTextRegion,
-                newPath
-                )
-            self._ip.end_edit(theEdit)
+            self._ip.run_command("replace_all_text", {"newText": newPath})
             # Move to the end of the line since we may have added text off the end
             self._ip.run_command("move_to", {"to": "eol"})
             self.prevText = newPath
@@ -223,8 +225,9 @@ class OpenWriteCommand(sublime_plugin.WindowCommand):
     def set_scratch_file_list(self, dir, files):
         if not self.scratch_file_list:
             layout = self.window.get_layout()
-            self.saved_layout = layout.copy()
+            self.saved_layout = copy.deepcopy(layout)
 
+            # Re arrange things so that this appears on the bottom
             numRows = len(layout["rows"])
             layout["rows"] = [0.0, 0.75, 1.0]
             layout["cells"].append([0, numRows-1, len(layout["cols"])-1, len(layout["rows"])-1])
@@ -232,16 +235,13 @@ class OpenWriteCommand(sublime_plugin.WindowCommand):
 
             # create scratch file list if it doesn't already exist
             self.window.focus_group(1)
-            #self.window.run_command('toggle_tabs')
             self.scratch_file_list = self.window.new_file()
             self.scratch_file_list.set_scratch(True)
             self.window.focus_view(self._ip)
         else:
             # clear contents of existing scratch list
             self.scratch_file_list.set_read_only(False)
-            edit = self.scratch_file_list.begin_edit()
-            self.scratch_file_list.erase(edit, sublime.Region(0, self.scratch_file_list.size()))
-            self.scratch_file_list.end_edit(edit)
+            self.scratch_file_list.run_command("replace_all_text", {"newText": ""})
 
         num_files = len(files)
 
@@ -274,9 +274,7 @@ class OpenWriteCommand(sublime_plugin.WindowCommand):
             buffer_text = u"No files found in current directory"
 
         # Update the contents of the scratch file list buffer and mark it as read only
-        edit = self.scratch_file_list.begin_edit()
-        self.scratch_file_list.insert(edit, 0, buffer_text)
-        self.scratch_file_list.end_edit(edit)
+        self.scratch_file_list.run_command("replace_all_text", {"newText": buffer_text})
         self.scratch_file_list.set_read_only(True)
 
     def close_scratch_file_list_if_exists(self):
