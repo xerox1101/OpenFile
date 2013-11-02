@@ -136,17 +136,27 @@ class OpenWriteCommand(sublime_plugin.WindowCommand):
         if head != '':
             currentDir = head
 
-        # Look for the special ~ or // characters
-        if '~' in currentDir:
+        # Environment variable parsing is limited.
+        if '$' in tail:
+            [beforeEnvironmentVar, environmentVar] = tail.split('$', 1)
+            value = os.environ.get(environmentVar)
+            if value is not None:
+              currentDir = os.path.join(beforeEnvironmentVar, value)
+              currentDir = os.path.join(head, currentDir)
+              (head, tail) = os.path.split(currentDir)
+              currentDir = head
+        else:
+          # Look for the special ~ or // characters
+          if '~' in currentDir:
             [junk, path] = currentDir.rsplit('~', 1)
             currentDir = os.path.expanduser(os.path.join("~", path))
-        if '//' in input_text:
-            [junk, path] = input_text.rsplit('//', 1)
-            drive = os.path.splitdrive(sys.executable)[0]
-            if drive == '':
-                currentDir = "/"
-            else:
-                currentDir = drive
+            if '//' in input_text:
+                [junk, path] = input_text.rsplit('//', 1)
+                drive = os.path.splitdrive(sys.executable)[0]
+                if drive == '':
+                    currentDir = "/"
+                else:
+                    currentDir = drive
 
         # Get the absolute path for this directory
         currentDir = os.path.abspath(currentDir)
