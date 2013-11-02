@@ -5,13 +5,10 @@ import os
 import copy
 from os import listdir
 from os import sep
-from os.path import commonprefix
 from os.path import isdir
 from os.path import exists
 from os.path import split
 from os import getenv
-from math import ceil
-from math import floor
 
 SCRATCH_COL_WIDTH = 40
 SCRATCH_DEFAULT_SPACING = 2
